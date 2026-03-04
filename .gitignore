@@ -1,0 +1,57 @@
+# === OS / Common trash ===
+*.log
+.DS_Store
+Thumbs.db
+.cache/
+
+# === PHP / QA tooling caches ===
+.phpactor.json
+.phpunit.result.cache
+.phpunit.cache/
+.php-cs-fixer.cache
+.phpstan/cache/
+junit.xml
+coverage/
+clover.xml
+.deptrac.cache
+
+# === Environment & secrets ===
+.env
+.env.*
+!.env.example
+!.env.test
+auth.json
+/storage/*.key
+/storage/pail
+
+# === IDE / Editors ===
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+.cursor/
+*.swp
+*.swo
+*~
+
+# === Dependencies ===
+vendor/
+node_modules/
+.pnpm-store/
+
+# === SvelteKit / Frontend ===
+.svelte-kit/
+build/
+vite.config.ts.timestamp-*
+vite.config.js.timestamp-*
+
+# === Logs ===
+npm-debug.log
+yarn-error.log
+
+# === Backups ===
+/backups/
+*.sql
+*.sql.gz
+*_backup.tar.gz

@@ -1,0 +1,107 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: runtracker-db-dev
+    environment:
+      POSTGRES_DB: ${DB_NAME:-runtracker}
+      POSTGRES_USER: ${DB_USER:-app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-app_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-app} -d ${DB_NAME:-runtracker}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - runtracker_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: runtracker-redis-dev
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - runtracker_network
+
+  # PHP Backend
+  php-fpm:
+    build:
+      context: .
+      dockerfile: docker/php-fpm/Dockerfile.dev
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: runtracker-php-fpm-dev
+    working_dir: /var/www/backend
+    volumes:
+      - ./backend:/var/www/backend
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql://${DB_USER:-app}:${DB_PASSWORD:-app_password}@postgres:5432/${DB_NAME:-runtracker}?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=0
+      MAILER_DSN: smtp://mailpit:1025
+      PHP_IDE_CONFIG: "serverName=Docker"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - runtracker_network
+
+  # Frontend Development Server (Vite)
+  frontend:
+    image: node:22-alpine
+    container_name: runtracker-frontend-dev
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm run dev --host"
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost/api
+    networks:
+      - runtracker_network
+
+  # Mailpit (email testing)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: runtracker-mailpit-dev
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - runtracker_network
+
+  # Nginx Web Server
+  nginx:
+    image: nginx:alpine
+    container_name: runtracker-nginx-dev
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.develop.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php-fpm
+      - frontend
+    networks:
+      - runtracker_network
+
+networks:
+  runtracker_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
