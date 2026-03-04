@@ -1,0 +1,298 @@
+name: CD (Deploy)
+
+on:
+  # push:
+  #   tags:
+  #     - "*"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/runtracker
+  DOCKER_BUILDKIT: "1"
+
+jobs:
+  # Reuse CI workflow instead of duplicating tests
+  ci:
+    name: Run CI Checks
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  build:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [ci]
+    timeout-minutes: 30
+
+    env:
+      CACHE_APP: ghcr.io/${{ github.repository_owner }}/runtracker:cache-app
+      CACHE_WEB: ghcr.io/${{ github.repository_owner }}/runtracker:cache-web
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute SAFE_TAG
+        if: startsWith(github.ref, 'refs/tags/')
+        id: tag
+        shell: bash
+        run: |
+          RAW="${GITHUB_REF_NAME}"
+          SAFE=$(printf "%s" "$RAW" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g')
+          echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
+
+      # APP image
+      - name: Build & push APP (SHA)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/php-fpm/Dockerfile
+          push: true
+          cache-from: |
+            type=registry,ref=${{ env.CACHE_APP }}
+            type=gha,scope=app
+          cache-to: |
+            type=registry,ref=${{ env.CACHE_APP }},mode=max,compression=zstd
+            type=gha,mode=max,scope=app
+          tags: ${{ env.IMAGE_NAME }}:app-${{ github.sha }}
+
+      - name: Build & push APP (version, latest)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/php-fpm/Dockerfile
+          push: true
+          cache-from: |
+            type=registry,ref=${{ env.CACHE_APP }}
+            type=gha,scope=app
+          cache-to: |
+            type=registry,ref=${{ env.CACHE_APP }},mode=max,compression=zstd
+            type=gha,mode=max,scope=app
+          tags: |
+            ${{ env.IMAGE_NAME }}:app-${{ steps.tag.outputs.safe }}
+            ${{ env.IMAGE_NAME }}:app-latest
+
+      # WEB image
+      - name: Build & push WEB (SHA)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          push: true
+          cache-from: |
+            type=registry,ref=${{ env.CACHE_WEB }}
+            type=gha,scope=web
+          cache-to: |
+            type=registry,ref=${{ env.CACHE_WEB }},mode=max,compression=zstd
+            type=gha,mode=max,scope=web
+          tags: ${{ env.IMAGE_NAME }}:web-${{ github.sha }}
+
+      - name: Build & push WEB (version, latest)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          push: true
+          cache-from: |
+            type=registry,ref=${{ env.CACHE_WEB }}
+            type=gha,scope=web
+          cache-to: |
+            type=registry,ref=${{ env.CACHE_WEB }},mode=max,compression=zstd
+            type=gha,mode=max,scope=web
+          tags: |
+            ${{ env.IMAGE_NAME }}:web-${{ steps.tag.outputs.safe }}
+            ${{ env.IMAGE_NAME }}:web-latest
+
+  # Security scanning with Trivy
+  security-scan:
+    name: Security Scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: [build]
+    timeout-minutes: 15
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan APP image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:app-${{ github.sha }}
+          format: sarif
+          output: trivy-app-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Scan WEB image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:web-${{ github.sha }}
+          format: sarif
+          output: trivy-web-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+      - name: Upload APP scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-app-results.sarif
+          category: trivy-app
+
+      - name: Upload WEB scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-web-results.sarif
+          category: trivy-web
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, security-scan]
+    # if: startsWith(github.ref, 'refs/tags/')
+    timeout-minutes: 20
+
+    steps:
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          command_timeout: 20m
+          envs: IMAGE_NAME,GITHUB_SHA,GITHUB_ACTOR,GITHUB_TOKEN,GITHUB_REPOSITORY
+          script: |
+            set -euo pipefail
+            cd /opt/run-app
+
+            # Update docker-compose.production.yml from repository
+            echo "Updating docker-compose.production.yml from repository..."
+            curl -fsSL \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3.raw" \
+              -o docker-compose.production.yml.new \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/docker-compose.production.yml?ref=${GITHUB_SHA}" \
+              && mv docker-compose.production.yml.new docker-compose.production.yml \
+              || echo "⚠️  Failed to download docker-compose.production.yml, using existing file"
+
+            # Update nginx.conf from repository
+            echo "Updating nginx.conf from repository..."
+            curl -fsSL \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3.raw" \
+              -o nginx.conf.new \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/docker/nginx/nginx.production.conf?ref=${GITHUB_SHA}" \
+              && mv nginx.conf.new nginx.conf \
+              || echo "⚠️  Failed to download nginx.conf, using existing file"
+
+            # Check for .env file
+            if [ ! -f .env ]; then
+              echo "❌ ERROR: .env file not found in /opt/run-app"
+              echo "Please create .env file with required variables:"
+              echo "  DB_NAME, DB_USER, DB_PASSWORD"
+              echo "  APP_SECRET, JWT_SECRET_KEY, JWT_PUBLIC_KEY, JWT_PASSPHRASE"
+              exit 1
+            fi
+
+            # Validate required variables
+            source .env || true
+            if [ -z "${DB_NAME:-}" ] || [ -z "${DB_USER:-}" ] || [ -z "${DB_PASSWORD:-}" ]; then
+              echo "❌ ERROR: Missing required database variables in .env"
+              exit 1
+            fi
+
+            # Login to GHCR
+            echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+            # Immutable deploy by SHA
+            APP_IMAGE="${IMAGE_NAME}:app-${GITHUB_SHA}"
+            WEB_IMAGE="${IMAGE_NAME}:web-${GITHUB_SHA}"
+
+            echo "Deploying images:"
+            echo "  APP: ${APP_IMAGE}"
+            echo "  WEB: ${WEB_IMAGE}"
+
+            # Preflight check
+            docker manifest inspect "${APP_IMAGE}" >/dev/null || { echo "ERROR: Missing ${APP_IMAGE}"; exit 1; }
+            docker manifest inspect "${WEB_IMAGE}" >/dev/null || { echo "ERROR: Missing ${WEB_IMAGE}"; exit 1; }
+
+            # Update compose file with image tags
+            sed -i "s|IMAGE_APP|${APP_IMAGE}|g" docker-compose.production.yml
+            sed -i "s|IMAGE_WEB|${WEB_IMAGE}|g" docker-compose.production.yml
+
+            # Validate and pull
+            docker compose -f docker-compose.production.yml --env-file .env config -q
+            docker compose -f docker-compose.production.yml --env-file .env pull
+
+            # Deploy
+            docker compose -f docker-compose.production.yml --env-file .env down
+            docker compose -f docker-compose.production.yml --env-file .env up -d
+
+            # Wait for services
+            echo "Waiting for services to start..."
+            sleep 15
+
+            # Wait for postgres
+            echo "Waiting for postgres to become healthy..."
+            timeout=60
+            while [ $timeout -gt 0 ]; do
+              status=$(docker compose -f docker-compose.production.yml --env-file .env ps postgres --format json 2>/dev/null | grep -o '"Health":"[^"]*"' | cut -d'"' -f4 || echo "")
+              if [ "$status" = "healthy" ]; then
+                echo "✅ Postgres is healthy"
+                break
+              fi
+              echo "Waiting for postgres... ($timeout seconds left)"
+              sleep 2
+              timeout=$((timeout - 2))
+            done
+
+            if [ $timeout -le 0 ]; then
+              echo "⚠️  Postgres healthcheck timeout"
+              docker compose -f docker-compose.production.yml --env-file .env logs postgres --tail 50 || true
+            fi
+
+            # Run migrations and clear cache
+            docker compose -f docker-compose.production.yml --env-file .env exec -T php-fpm php bin/console doctrine:migrations:migrate --no-interaction || true
+            docker compose -f docker-compose.production.yml --env-file .env exec -T php-fpm php bin/console cache:clear --no-warmup
+            docker compose -f docker-compose.production.yml --env-file .env exec -T php-fpm php bin/console cache:warmup
+
+            # Cleanup
+            docker image prune -f
+
+            echo "✅ Deployment completed successfully!"
+            echo "   APP: ${APP_IMAGE}"
+            echo "   WEB: ${WEB_IMAGE}"

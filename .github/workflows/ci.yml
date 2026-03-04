@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: {}
+  workflow_call:
+    outputs:
+      tests-passed:
+        description: Whether all tests passed
+        value: ${{ jobs.backend-tests.result == 'success' && jobs.frontend-quality.result == 'success' }}
+
+permissions:
+  contents: read
+
+env:
+  BACKEND_DIR: backend
+  FRONTEND_DIR: frontend
+
+jobs:
+  # Backend: Code Style Check
+  backend-lint:
+    name: Backend - Code Style (PHP CS Fixer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP environment
+        uses: ./.github/actions/setup-php
+        with:
+          working-directory: ${{ env.BACKEND_DIR }}
+          composer-options: --no-interaction --no-progress --prefer-dist --no-scripts
+
+      - name: Check code style (PHP CS Fixer)
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff --verbose
+
+  # Backend: Architecture Check
+  backend-deptrac:
+    name: Backend - Architecture (Deptrac)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP environment
+        uses: ./.github/actions/setup-php
+        with:
+          working-directory: ${{ env.BACKEND_DIR }}
+          composer-options: --no-interaction --no-progress --prefer-dist --no-scripts
+
+      - name: Check architecture (Deptrac)
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: vendor/bin/deptrac analyse --config-file=deptrac.yml
+
+  # Backend: Static Analysis
+  backend-phpstan:
+    name: Backend - Static Analysis (PHPStan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP environment
+        uses: ./.github/actions/setup-php
+        with:
+          working-directory: ${{ env.BACKEND_DIR }}
+          composer-options: --no-interaction --no-progress --prefer-dist --no-scripts
+
+      - name: Run static analysis (PHPStan)
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: vendor/bin/phpstan analyse src tests --memory-limit=2G --no-progress
+
+  # Backend: Tests
+  backend-tests:
+    name: Backend - Tests (PHPUnit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app_password
+          POSTGRES_DB: runtracker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U app"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP environment
+        uses: ./.github/actions/setup-php
+        with:
+          working-directory: ${{ env.BACKEND_DIR }}
+
+      - name: Prepare test environment
+        uses: ./.github/actions/prepare-test-env
+        with:
+          working-directory: ${{ env.BACKEND_DIR }}
+
+      - name: Run database Migrations
+        working-directory: ${{ env.BACKEND_DIR }}
+        env:
+          APP_ENV: test
+          DATABASE_URL: postgresql://app:app_password@localhost:5432/runtracker?serverVersion=16&charset=utf8
+        run: php bin/console doctrine:Migrations:migrate --no-interaction
+
+      - name: Run tests (PHPUnit)
+        working-directory: ${{ env.BACKEND_DIR }}
+        env:
+          DATABASE_URL: postgresql://app:app_password@localhost:5432/runtracker?serverVersion=16&charset=utf8
+        run: vendor/bin/phpunit --configuration phpunit.dist.xml --log-junit junit.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/junit.xml
+          retention-days: 7
+
+  # Frontend: Quality Checks
+  frontend-quality:
+    name: Frontend - Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          working-directory: ${{ env.FRONTEND_DIR }}
+
+      - name: Lint (ESLint)
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: pnpm run lint
+
+      - name: Check types (svelte-check)
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: pnpm run check
+
+      - name: Build
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: pnpm run build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/build
+          retention-days: 7

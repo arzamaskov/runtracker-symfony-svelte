@@ -1,0 +1,6 @@
+# Все файлы требуют ревью хотя бы одного core-разработчика
+* @arzamaskov
+
+# Примеры точечных владельцев
+# app/app/Runs/**              @arzamaskov
+# docker/**                    @arzamaskov
