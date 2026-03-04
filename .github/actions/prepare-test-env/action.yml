@@ -1,0 +1,34 @@
+name: Prepare Test Environment
+description: Create .env file and generate JWT keys for testing
+
+inputs:
+  working-directory:
+    description: Working directory (backend)
+    required: false
+    default: backend
+  jwt-passphrase:
+    description: JWT passphrase
+    required: false
+    default: test
+
+runs:
+  using: composite
+  steps:
+    - name: Create .env file
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        cp .env.test .env
+        echo "APP_SECRET=test_secret_for_ci" >> .env
+        echo "DEFAULT_URI=http://localhost" >> .env
+        echo "JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem" >> .env
+        echo "JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem" >> .env
+        echo "JWT_PASSPHRASE=${{ inputs.jwt-passphrase }}" >> .env
+
+    - name: Generate JWT keys
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        mkdir -p config/jwt
+        openssl genpkey -out config/jwt/private.pem -algorithm rsa -pkeyopt rsa_keygen_bits:2048 -pass pass:${{ inputs.jwt-passphrase }}
+        openssl rsa -in config/jwt/private.pem -outform PEM -pubout -out config/jwt/public.pem -passin pass:${{ inputs.jwt-passphrase }}
