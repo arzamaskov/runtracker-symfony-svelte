@@ -1,7 +1,7 @@
 # RUNTRACKER
 
-![CI](https://github.com/arzamaskov/runtracker/actions/workflows/ci.yml/badge.svg)
-![CD](https://github.com/arzamaskov/runtracker/actions/workflows/cd.yml/badge.svg)
+![CI](https://github.com/arzamaskov/runtracker-symfony-svelte/actions/workflows/ci.yml/badge.svg)
+![CD](https://github.com/arzamaskov/runtracker-symfony-svelte/actions/workflows/cd.yml/badge.svg)
 ![PHP](https://img.shields.io/badge/php-8.4-777bb4?logo=php&logoColor=white)
 ![Symfony](https://img.shields.io/badge/symfony-7.4-000000?logo=symfony&logoColor=white)
 
