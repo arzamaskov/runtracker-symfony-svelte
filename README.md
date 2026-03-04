@@ -9,9 +9,10 @@
 
 ## Technologies
 
-- **Backend**: Symfony 7.4 (PHP 8.4), PostgreSQL 16
+- **Backend**: Symfony 7.4 (PHP 8.4), PostgreSQL 16, Redis 7
 - **Frontend**: SvelteKit, TypeScript, Tailwind CSS
-- **Infrastructure**: Docker, GitHub Actions
+- **Infrastructure**: Docker, GitHub Actions, Nginx
+- **Dev tools**: Mailpit (email testing), Xdebug
 
 ## Architecture & Standards
 
@@ -31,18 +32,58 @@ The project follows **Hexagonal Architecture** and **DDD** principles.
 - Docker & Docker Compose
 - Make
 
+### Build & Run
+
+```bash
+make build
+make up
+```
+
+### Access
+
+| Service    | URL                          |
+|------------|------------------------------|
+| Frontend   | http://localhost              |
+| Vite HMR   | http://localhost:5173         |
+| Mailpit    | http://localhost:8025         |
+| PostgreSQL | localhost:5432 (user: `app`)  |
+| Redis      | localhost:6379               |
+
 ### Key Commands
 
 ```bash
-# Build and start
-make build
-make up
-
-# Backend shell
-make shell
-
-# Quality checks (tests, linters, static analysis)
+# Quality checks (linters, static analysis, tests)
 make ci
+
+# Individual checks
+make lint          # PHP CS Fixer (dry-run)
+make lint-fix      # PHP CS Fixer (auto-fix)
+make lint-js       # ESLint
+make stan          # PHPStan
+make deptrac       # Deptrac
+make test          # PHPUnit
+make test-coverage # PHPUnit with coverage report
+
+# Composer / pnpm
+make composer cmd="require vendor/package"
+make pnpm CMD="add -D some-package"
+
+# Symfony console
+make console cmd="about"
+make cc             # Clear cache
+
+# Database
+make migrate        # Run migrations
+make migrate-diff   # Generate migration
+make psql           # PostgreSQL console
+
+# Shells
+make shell          # PHP-FPM container
+make shell-frontend # Frontend container
+
+# Info
+make help           # All available commands
+make info           # Project info & versions
 ```
 
 ## Development Workflow

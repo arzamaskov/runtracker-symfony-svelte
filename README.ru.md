@@ -9,9 +9,10 @@
 
 ## Технологии
 
-- **Backend**: Symfony 7.4 (PHP 8.4), PostgreSQL 16
+- **Backend**: Symfony 7.4 (PHP 8.4), PostgreSQL 16, Redis 7
 - **Frontend**: SvelteKit, TypeScript, Tailwind CSS
-- **Инфраструктура**: Docker, GitHub Actions
+- **Инфраструктура**: Docker, GitHub Actions, Nginx
+- **Dev-инструменты**: Mailpit (тестирование email), Xdebug
 
 ## Архитектура и Стандарты
 
@@ -31,18 +32,58 @@
 - Docker & Docker Compose
 - Make
 
+### Сборка и запуск
+
+```bash
+make build
+make up
+```
+
+### Доступ
+
+| Сервис     | URL                          |
+|------------|------------------------------|
+| Frontend   | http://localhost              |
+| Vite HMR   | http://localhost:5173         |
+| Mailpit    | http://localhost:8025         |
+| PostgreSQL | localhost:5432 (user: `app`)  |
+| Redis      | localhost:6379               |
+
 ### Основные команды
 
 ```bash
-# Сборка и запуск
-make build
-make up
-
-# Backend shell
-make shell
-
-# Проверка качества (тесты, линтеры, статический анализ)
+# Проверка качества (линтеры, статический анализ, тесты)
 make ci
+
+# Отдельные проверки
+make lint          # PHP CS Fixer (dry-run)
+make lint-fix      # PHP CS Fixer (авто-исправление)
+make lint-js       # ESLint
+make stan          # PHPStan
+make deptrac       # Deptrac
+make test          # PHPUnit
+make test-coverage # PHPUnit с отчётом покрытия
+
+# Composer / pnpm
+make composer cmd="require vendor/package"
+make pnpm CMD="add -D some-package"
+
+# Symfony console
+make console cmd="about"
+make cc             # Очистка кэша
+
+# База данных
+make migrate        # Запуск миграций
+make migrate-diff   # Генерация миграции
+make psql           # Консоль PostgreSQL
+
+# Шеллы
+make shell          # PHP-FPM контейнер
+make shell-frontend # Frontend контейнер
+
+# Информация
+make help           # Все доступные команды
+make info           # Информация о проекте и версиях
 ```
 
 ## Процесс Разработки
