@@ -1,0 +1,40 @@
+FROM php:8.4-fpm-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    curl \
+    postgresql-dev \
+    libzip-dev \
+    icu-dev \
+    icu-libs \
+    zip \
+    unzip \
+    linux-headers \
+    $PHPIZE_DEPS \
+    && docker-php-ext-install pdo pdo_pgsql zip opcache intl \
+    && pecl install xdebug \
+    && docker-php-ext-enable xdebug
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Configure PHP for development
+RUN mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
+
+# Configure Xdebug
+RUN echo "xdebug.mode=debug,coverage" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
+# Create system user to run Composer and Symfony Console commands
+ARG UID=1000
+ARG GID=1000
+RUN addgroup -g $GID app && \
+    adduser -u $UID -G app -s /bin/sh -D app
+
+USER app
+
+EXPOSE 9000
+
+CMD ["php-fpm"]
