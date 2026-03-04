@@ -34,6 +34,7 @@
             "symfony/runtime": true
         },
         "bump-after-update": true,
+        "platform-check": false,
         "sort-packages": true
     },
     "autoload": {

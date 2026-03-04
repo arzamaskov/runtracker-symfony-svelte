@@ -192,7 +192,7 @@ lint-js: ## Check frontend code style (ESLint)
 	$(DC) exec -T frontend pnpm run lint
 
 deptrac: ## Analyze architectural dependencies (Deptrac)
-	$(DC_EXEC) php-fpm ./vendor/bin/deptrac --config-file=deptrac.yml
+	$(DC_EXEC) php-fpm ./vendor/bin/deptrac --config-file=deptrac.yaml
 
 stan: ## Run static code analysis (PHPStan)
 	$(DC_EXEC) php-fpm ./vendor/bin/phpstan analyse --memory-limit=2G

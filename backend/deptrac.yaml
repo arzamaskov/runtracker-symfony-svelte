@@ -1,0 +1,36 @@
+deptrac:
+  paths:
+    - ./src
+
+  layers:
+    # Доменный слой — чистая бизнес-логика
+    - name: Domain
+      collectors:
+        - type: directory
+          value: src/.*/Domain/.*
+
+    # Слой приложения — use cases
+    - name: Application
+      collectors:
+        - type: directory
+          value: src/.*/Application/.*
+
+    # Инфраструктурный слой — адаптеры
+    - name: Infrastructure
+      collectors:
+        - type: directory
+          value: src/.*/Infrastructure/.*
+
+  ruleset:
+    # Domain НЕ зависит ни от чего
+    Domain: ~
+
+    # Application зависит только от Domain
+    Application:
+      - Domain
+
+    # Infrastructure зависит от всех
+    Infrastructure:
+      - Domain
+      - Application
+
