@@ -127,7 +127,7 @@
             "config/services.yaml",
             "public/index.php",
             "src/Controller/.gitignore",
-            "src/Kernel.php",
+            "src/Shared/Infrastructure/Kernel.php",
             ".editorconfig"
         ]
     },
