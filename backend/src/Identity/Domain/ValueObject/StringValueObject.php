@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Identity\Domain\ValueObject;
+
+abstract readonly class StringValueObject
+{
+    protected function __construct(protected string $value) {}
+
+    final public function value(): string
+    {
+        return $this->value;
+    }
+
+    final public function equals(self $other): bool
+    {
+        return $this->value === $other->value;
+    }
+
+    final public function __toString(): string
+    {
+        return $this->value;
+    }
+}
