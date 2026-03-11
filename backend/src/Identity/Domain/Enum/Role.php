@@ -12,7 +12,7 @@ enum Role: string
     case ADMIN = 'ROLE_ADMIN';
 
     /**
-     * @throws InvalidArgumentException When role is неизвестна/неподдерживаемая.
+     * @throws InvalidArgumentException When the role is unknown or unsupported.
      */
     public static function fromString(string $role): self
     {
