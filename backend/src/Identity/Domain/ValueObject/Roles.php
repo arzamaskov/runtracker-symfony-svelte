@@ -8,7 +8,7 @@ use InvalidArgumentException;
 
 final readonly class Roles
 {
-    /** @var array<strict, true */
+    /** @var string[] */
     private array $roles;
 
 
@@ -20,5 +20,21 @@ final readonly class Roles
         if ($roles === []) {
             throw new InvalidArgumentException('Roles cannot be empty');
         }
+
+        foreach ($roles as $role) {
+            if (!is_string($role) || $role === '') {
+                throw new InvalidArgumentException('Each role must be a non-empty string');
+            }
+        }
+
+        $this->roles = array_values(array_unique($roles));
+    }
+
+    /**
+     * @return string[]
+     */
+    public function roles(): array
+    {
+        return $this->roles;
     }
 }
