@@ -18,6 +18,16 @@ final readonly class Roles
      */
     public function __construct(array $roles)
     {
+        $this->roles = self::normalizeRoles($roles);
+    }
+
+    /**
+     * @param array<string|Role> $roles
+     *
+     * @return string[]
+     */
+    private static function normalizeRoles(array $roles): array
+    {
         if ($roles === []) {
             throw new InvalidArgumentException('Roles cannot be empty');
         }
@@ -37,7 +47,7 @@ final readonly class Roles
             $normalized[] = Role::fromString($role);
         }
 
-        $this->roles = array_values(array_unique(array_map(
+        return array_values(array_unique(array_map(
             static fn(Role $role): string => $role->value,
             $normalized
         )));
