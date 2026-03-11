@@ -55,3 +55,4 @@ yarn-error.log
 *.sql
 *.sql.gz
 *_backup.tar.gz
+.aider*

@@ -9,9 +9,9 @@ use Symfony\Component\Uid\Uuid;
 
 final readonly class UserId extends StringValueObject
 {
-    private function __construct(string $uuid)
+    public static function generate(): self
     {
-        parent::__construct($uuid);
+        return new self(Uuid::v7()->toRfc4122());
     }
 
     public static function from(string $uuid): self

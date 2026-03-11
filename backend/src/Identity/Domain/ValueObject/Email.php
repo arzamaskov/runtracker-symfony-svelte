@@ -8,11 +8,6 @@ use InvalidArgumentException;
 
 final readonly class Email extends StringValueObject
 {
-    private function __construct(string $email)
-    {
-        parent::__construct($email);
-    }
-
     public static function from(string $email): self
     {
         $email = trim($email);
