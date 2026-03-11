@@ -33,6 +33,11 @@ return (new PhpCsFixer\Config())
 
         // Методы тестов в snake case
         'php_unit_method_casing' => ['case' => 'snake_case'],
+
+        // Пустая строка перед return
+        'blank_line_before_statement' => [
+            'statements' => ['return'],
+        ],
     ])
     ->setFinder($finder)
     ->setRiskyAllowed(true);
