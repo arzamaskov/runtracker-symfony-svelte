@@ -12,45 +12,38 @@ final readonly class Roles
     /** @var string[] */
     private array $roles;
 
-
     /**
-     * @param array<string|Role> $roles
+     * @param string[] $roles
      */
-    public function __construct(array $roles)
+    protected function __construct(array $roles)
     {
-        $this->roles = self::normalizeRoles($roles);
+        $this->roles = self::normalize($roles);
     }
 
     /**
-     * @param array<string|Role> $roles
-     *
-     * @return string[]
+     * @param Role[] $roles
      */
-    private static function normalizeRoles(array $roles): array
+    public static function fromEnums(array $roles): self
     {
-        if ($roles === []) {
-            throw new InvalidArgumentException('Roles cannot be empty');
-        }
+        return new self(
+            array_map(
+                static fn(Role $role): string => $role->value,
+                $roles,
+            ),
+        );
+    }
 
-        $normalized = [];
+    /**
+     * @param string[] $roles
+     */
+    public static function fromStrings(array $roles): self
+    {
+        return new self($roles);
+    }
 
-        foreach ($roles as $role) {
-            if ($role instanceof Role) {
-                $normalized[] = $role;
-                continue;
-            }
-
-            if (!is_string($role) || $role === '') {
-                throw new InvalidArgumentException('Each role must be a non-empty string');
-            }
-
-            $normalized[] = Role::fromString($role);
-        }
-
-        return array_values(array_unique(array_map(
-            static fn(Role $role): string => $role->value,
-            $normalized
-        )));
+    public function has(Role $role): bool
+    {
+        return in_array($role->value, $this->roles, true);
     }
 
     /**
@@ -61,11 +54,6 @@ final readonly class Roles
         return $this->roles;
     }
 
-    public function has(Role $role): bool
-    {
-        return in_array($role->value, $this->roles, true);
-    }
-
     /**
      * @return Role[]
      */
@@ -73,7 +61,31 @@ final readonly class Roles
     {
         return array_map(
             static fn(string $role): Role => Role::fromString($role),
-            $this->roles
+            $this->roles,
         );
+    }
+
+    /**
+     * @param string[] $roles
+     *
+     * @return string[]
+     */
+    private static function normalize(array $roles): array
+    {
+        if ($roles === []) {
+            throw new InvalidArgumentException('Roles cannot be empty');
+        }
+
+        $values = [];
+
+        foreach ($roles as $role) {
+            if (!is_string($role) || $role === '') {
+                throw new InvalidArgumentException('Each role must be a non-empty string');
+            }
+
+            $values[] = Role::fromString($role)->value;
+        }
+
+        return array_values(array_unique($values));
     }
 }
