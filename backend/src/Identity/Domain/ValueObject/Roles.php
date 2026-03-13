@@ -65,6 +65,31 @@ final readonly class Roles
         );
     }
 
+    public function add(Role $role): self
+    {
+        if ($this->has($role)) {
+            return $this;
+        }
+
+        $roles = $this->roles;
+        $roles[] = $role->value;
+
+        return $this->with($roles);
+    }
+
+    public function remove(Role $role): self
+    {
+        $index = array_search($role->value, $this->roles, true);
+        if ($index === false) {
+            return $this;
+        }
+
+        $roles = $this->roles;
+        unset($roles[$index]);
+
+        return $this->with($roles);
+    }
+
     /**
      * @param string[] $roles
      *
@@ -87,5 +112,10 @@ final readonly class Roles
         }
 
         return array_values(array_unique($values));
+    }
+
+    private function with(array $roles): self
+    {
+        return new self($roles);
     }
 }
