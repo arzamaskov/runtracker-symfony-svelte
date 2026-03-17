@@ -39,9 +39,15 @@ class User
         return $this->roles;
     }
 
-    public function assignRole(Role $role): void {}
+    public function assignRole(Role $role): void
+    {
+        $this->roles = $this->roles->add($role);
+    }
 
-    public function revokeRole(Role $role): void {}
+    public function revokeRole(Role $role): void
+    {
+        $this->roles = $this->roles->remove($role);
+    }
 
     public function hasRole(Role $role): bool
     {

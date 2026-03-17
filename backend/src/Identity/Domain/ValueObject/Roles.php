@@ -104,7 +104,7 @@ final readonly class Roles
         $values = [];
 
         foreach ($roles as $role) {
-            if (!is_string($role) || $role === '') {
+            if ($role === '') {
                 throw new InvalidArgumentException('Each role must be a non-empty string');
             }
 
@@ -114,6 +114,10 @@ final readonly class Roles
         return array_values(array_unique($values));
     }
 
+
+    /**
+     * @param string[] $roles
+     */
     private function with(array $roles): self
     {
         return new self($roles);
