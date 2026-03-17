@@ -8,6 +8,11 @@ abstract readonly class StringValueObject
 {
     protected function __construct(protected string $value) {}
 
+    final public function __toString(): string
+    {
+        return $this->value;
+    }
+
     final public function value(): string
     {
         return $this->value;
@@ -16,10 +21,5 @@ abstract readonly class StringValueObject
     final public function equals(self $other): bool
     {
         return $this->value === $other->value;
-    }
-
-    final public function __toString(): string
-    {
-        return $this->value;
     }
 }
