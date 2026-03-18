@@ -20,6 +20,7 @@ abstract readonly class StringValueObject
 
     final public function equals(self $other): bool
     {
-        return $this->value === $other->value;
+        return get_class($this) === get_class($other)
+            && $this->value === $other->value;
     }
 }
