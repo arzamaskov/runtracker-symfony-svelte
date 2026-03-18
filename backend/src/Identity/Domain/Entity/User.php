@@ -7,7 +7,6 @@ namespace App\Identity\Domain\Entity;
 use App\Identity\Domain\Enum\Role;
 use App\Identity\Domain\ValueObject\Email;
 use App\Identity\Domain\ValueObject\PasswordHash;
-use App\Identity\Domain\ValueObject\Roles;
 use App\Identity\Domain\ValueObject\UserId;
 
 class User
@@ -15,8 +14,8 @@ class User
     public function __construct(
         private readonly UserId $id,
         private Email $email,
-        private ?PasswordHash $passwordHash,
-        private Roles $roles,
+        private PasswordHash $passwordHash,
+        private Role $role = Role::USER,
     ) {}
 
     public function id(): UserId
@@ -29,29 +28,14 @@ class User
         return $this->email;
     }
 
-    public function password(): ?PasswordHash
+    public function password(): PasswordHash
     {
         return $this->passwordHash;
     }
 
-    public function roles(): Roles
+    public function role(): Role
     {
-        return $this->roles;
-    }
-
-    public function assignRole(Role $role): void
-    {
-        $this->roles = $this->roles->add($role);
-    }
-
-    public function revokeRole(Role $role): void
-    {
-        $this->roles = $this->roles->remove($role);
-    }
-
-    public function hasRole(Role $role): bool
-    {
-        return $this->roles->has($role);
+        return $this->role;
     }
 
     public function changeEmail(Email $newEmail): void

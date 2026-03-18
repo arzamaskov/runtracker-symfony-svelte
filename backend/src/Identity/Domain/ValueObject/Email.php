@@ -10,14 +10,12 @@ final readonly class Email extends StringValueObject
 {
     public static function from(string $email): self
     {
-        $email = trim($email);
+        $email = mb_strtolower(trim($email));
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new InvalidArgumentException('Invalid email address');
         }
 
-        [$local, $domain] = explode('@', $email, 2);
-
-        return new self($local . '@' . mb_strtolower($domain));
+        return new self($email);
     }
 }
