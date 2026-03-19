@@ -1,3 +1,0 @@
-Изменения не приемлемы: Roles::add/remove возвращают новый объект, поэтому нужно присваивать
-$this->roles = $this->roles->add($role) и $this->roles = $this->roles->remove($role).
-В текущем виде роли фактически не меняются.
