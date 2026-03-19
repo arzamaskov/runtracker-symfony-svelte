@@ -56,3 +56,4 @@ yarn-error.log
 *.sql.gz
 *_backup.tar.gz
 .aider*
+chat
