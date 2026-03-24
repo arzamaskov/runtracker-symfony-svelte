@@ -34,7 +34,7 @@ class UserFactoryTest extends TestCase
 
         self::assertInstanceOf(User::class, $user);
         self::assertTrue($user->email()->equals($email));
-        self::assertTrue($user->password()->equals($passwordHash));
+        self::assertTrue($user->passwordHash()->equals($passwordHash));
         self::assertSame(Role::USER, $user->role());
         self::assertInstanceOf(UserId::class, $user->id());
     }

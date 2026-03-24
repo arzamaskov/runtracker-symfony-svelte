@@ -1,0 +1,21 @@
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                          https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity
+        name="App\Identity\Infrastructure\Persistence\Doctrine\Entity\DoctrineUser"
+        schema="identity"
+        table="users"
+    >
+        <id name="id" type="uuid">
+            <generator strategy="NONE" />
+        </id>
+        <field name="email" column="email" type="string" nullable="false"/>
+        <field name="passwordHash" column="password_hash" type="string" nullable="false"/>
+        <field name="role" column="role" type="string" nullable="false"/>
+
+        <unique-constraints>
+            <unique-constraint columns="email" name="uniq_identity_users_email" />
+        </unique-constraints>
+    </entity>
+</doctrine-mapping>

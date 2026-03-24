@@ -28,7 +28,7 @@ class User
         return $this->email;
     }
 
-    public function password(): PasswordHash
+    public function passwordHash(): PasswordHash
     {
         return $this->passwordHash;
     }
