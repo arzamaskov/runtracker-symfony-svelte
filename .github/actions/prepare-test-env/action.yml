@@ -6,6 +6,10 @@ inputs:
     description: Working directory (backend)
     required: false
     default: backend
+  database-url:
+    description: Database URL to write into .env for test runs
+    required: false
+    default: ''
   jwt-passphrase:
     description: JWT passphrase
     required: false
@@ -24,6 +28,9 @@ runs:
         echo "JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem" >> .env
         echo "JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem" >> .env
         echo "JWT_PASSPHRASE=${{ inputs.jwt-passphrase }}" >> .env
+        if [ -n "${{ inputs.database-url }}" ]; then
+          echo "DATABASE_URL=${{ inputs.database-url }}" >> .env
+        fi
 
     - name: Generate JWT keys
       shell: bash
