@@ -13,3 +13,10 @@ controllers:
         namespace: App\Shared\Presentation\Api\Controller
     type: attribute
     prefix: /api
+
+identity_controllers:
+    resource:
+        path: ../src/Identity/Presentation/Api/Controller/
+        namespace: App\Identity\Presentation\Api\Controller
+    type: attribute
+    prefix: /api
