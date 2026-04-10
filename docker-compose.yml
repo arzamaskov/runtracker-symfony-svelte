@@ -67,7 +67,7 @@ services:
     working_dir: /app
     volumes:
       - ./frontend:/app
-    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm run dev --host"
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm run dev --host"
     ports:
       - "5173:5173"
     environment:
