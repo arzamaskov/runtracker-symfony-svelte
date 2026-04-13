@@ -117,20 +117,20 @@ jobs:
         uses: ./.github/actions/prepare-test-env
         with:
           working-directory: ${{ env.BACKEND_DIR }}
-          database-url: postgresql://app:app_password@localhost:5432/runtracker_test?serverVersion=16&charset=utf8
+          database-url: postgresql://app:app_password@localhost:5432/runtracker?serverVersion=16&charset=utf8
 
       - name: Run database Migrations
         working-directory: ${{ env.BACKEND_DIR }}
         env:
           APP_ENV: test
-          DATABASE_URL: postgresql://app:app_password@localhost:5432/runtracker_test?serverVersion=16&charset=utf8
+          DATABASE_URL: postgresql://app:app_password@localhost:5432/runtracker?serverVersion=16&charset=utf8
         run: php bin/console doctrine:Migrations:migrate --no-interaction
 
       - name: Run tests (PHPUnit)
         working-directory: ${{ env.BACKEND_DIR }}
         env:
           APP_ENV: test
-          DATABASE_URL: postgresql://app:app_password@localhost:5432/runtracker_test?serverVersion=16&charset=utf8
+          DATABASE_URL: postgresql://app:app_password@localhost:5432/runtracker?serverVersion=16&charset=utf8
         run: vendor/bin/phpunit --configuration phpunit.dist.xml --log-junit junit.xml
 
       - name: Upload test results
